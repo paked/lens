@@ -1,0 +1,107 @@
+<html>
+
+<head>
+    <style>
+        body {
+            background-color: black;
+
+            color: green;
+
+            font-family: 'Courier New', Courier, monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.5.0/lib/p5.js"></script>
+
+    <h1>Hacking Station</h1>
+
+    <p>Possible ports</p>
+    <ul>
+        <li>MODEM</li>
+        <li>BEATS</li>
+        <li>BASS</li>
+        <li>CASSETTE</li>
+        <li>PADS</li>
+    </ul>
+
+    <p>list of commands</p>
+    <ul>
+        <li>birth PORT_NAME</li>
+        <li>murder PORT_NAME</li>
+    </ul>
+
+    <p>TODO commands</p>
+    <ul>
+        <li>vset PORT_NAME (volume set)</li>
+        <li>kneecap PORT_NAME</li>
+        <li>
+            for drums
+            <ul>
+                <li></li>
+            </ul>
+        </li>
+    </ul>
+
+    <input id="cmd" type="text" placeholder="your command here" />
+
+    <button onclick="go('quiz')">Enter command</button>
+
+    <br>
+    <br>
+    <br>
+
+    <script>
+        function question() {
+            let a = Math.ceil(Math.random() * 10);
+            let b = Math.ceil(Math.random() * 12);
+            let c = Math.ceil(Math.random() * 5);
+
+            let answer = prompt(`What is ${a} * ${b} * ${c}?`);
+
+            return parseInt(answer) === a * b * c;
+        }
+
+        let ws = new WebSocket("ws://localhost:3000");
+
+        function go(t) {
+            let elem = document.getElementById('cmd');
+
+            if (!question()) {
+                elem.disabled = true;
+
+                setTimeout(() => elem.disabled = false, 5000);
+                return;
+            }
+
+            alert('nice!');
+
+            ws.send(elem.value);
+        }
+    </script>
+
+    <script>
+        function setup() {
+            createCanvas(400, 400);
+        }
+
+        function draw() {
+            background('darkgreen')
+
+            if (mouseIsPressed) {
+                fill(0);
+
+                if (frameCount % 20 === 0) {
+                    ws.send("tweak " + mouseX/width)
+                }
+            } else {
+                fill(255);
+            }
+
+            ellipse(mouseX, mouseY, 80, 80);
+        }
+    </script>
+</body>
+
+</html>

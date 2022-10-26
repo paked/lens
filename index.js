@@ -49,6 +49,7 @@ function getPort(msg) {
 }
 
 wss.on('connection', (ws) => {
+    console.log('connected!');
   ws.on('message', (data) => {
     console.log('got %s', data);
 

@@ -13,7 +13,7 @@
 </head>
 
 <body>
-    <script src="https://cdn.jsdelivr.net/npm/p5@1.5.0/lib/p5.js"></script>
+    <script src="p5.js"></script>
 
     <h1>Hacking Station</h1>
 
@@ -63,7 +63,7 @@
             return parseInt(answer) === a * b * c;
         }
 
-        let ws = new WebSocket("ws://localhost:3000");
+        let ws = new WebSocket("ws://trisolaris.local:3000");
 
         function go(t) {
             let elem = document.getElementById('cmd');

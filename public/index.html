@@ -5,7 +5,7 @@
         body {
             background-color: black;
 
-            color: green;
+            color: #4df24d;
 
             font-family: 'Courier New', Courier, monospace;
         }
@@ -17,7 +17,7 @@
 
     <h1>Hacking Station</h1>
 
-    <p>Possible ports</p>
+    <p>Possible ports (substitude for PORT_NAME)</p>
     <ul>
         <li>MODEM</li>
         <li>BEATS</li>
@@ -26,10 +26,16 @@
         <li>PADS</li>
     </ul>
 
+    <p>Arrays (substitute for ARRAY_NAME)</p>
+    <ul>
+        <li>calm_voice_1, calm_voice_2, calm_voice_3 (voices of the pads, 1 is on 0 is off)</li>
+    </ul>
+
     <p>list of commands</p>
     <ul>
         <li>birth PORT_NAME</li>
         <li>murder PORT_NAME</li>
+        <li>listset ARRAY_NAME</li>
     </ul>
 
     <p>TODO commands</p>
@@ -68,40 +74,97 @@
         function go(t) {
             let elem = document.getElementById('cmd');
 
-            if (!question()) {
-                elem.disabled = true;
+            // if (!question()) {
+            //     elem.disabled = true;
 
-                setTimeout(() => elem.disabled = false, 5000);
-                return;
-            }
+            //     setTimeout(() => elem.disabled = false, 5000);
+            //     return;
+            // }
 
             alert('nice!');
 
             ws.send(elem.value);
         }
+
+        function multiout() {
+            let cmds = document.getElementById('out').value.split('\n').filter(row => row.length !== 0);
+
+            cmds.forEach(cmd => {
+                console.log('sending', cmd);
+                ws.send(cmd);
+            })
+        }
     </script>
 
     <script>
+        let rows = [[], [], []];
+        let positions = [];
+
+        let state = "PADS";
+
+        let count = 16;
+
         function setup() {
             createCanvas(400, 400);
+
+            rows = rows.map(row => [...Array.from({ length: count }).fill(undefined)]);
         }
 
         function draw() {
-            background('darkgreen')
+            background('darkgreen');
+            stroke('none');
 
-            if (mouseIsPressed) {
-                fill(0);
+            if (state === "NONE") {
+                if (mouseIsPressed) {
+                    fill(0);
 
-                if (frameCount % 20 === 0) {
-                    ws.send("tweak " + mouseX/width)
+                    if (frameCount % 20 === 0) {
+                        ws.send("tweak " + mouseX/width)
+                    }
+                } else {
+                    fill(255);
                 }
-            } else {
-                fill(255);
-            }
 
-            ellipse(mouseX, mouseY, 80, 80);
+                ellipse(mouseX, mouseY, 80, 80);
+            } else if (state === "PADS") {
+                document.getElementById('out').value = rows.map((row, i) => `list-set calm_voice_${i+1} ` + row.map(v => v ? 1 : 0).join(' ')).join('\n');
+
+                rows.forEach((_, i) => {
+                    fill(i % 2 === 0 ? 'green' : 'grey');
+                    rect(0, height/rows.length*i, width, width/rows.length*(i+1))
+                })
+
+                if (mouseIsPressed && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+                    let row = Math.floor(mouseY/(height/rows.length));
+
+                    let value = (keyIsDown(SHIFT)) ? undefined : mouseY;
+
+                    rows[row][Math.floor(mouseX/(width/count))] = value;
+                }
+
+                for (let i = 0; i < rows.length; i++) {
+                    let positions = rows[i];
+                    for (let x = 1; x < rows[i].length; x++) {
+                        if (!positions[x]|| !positions[x-1]) {
+                            continue;
+                        }
+
+                        line((x-1)*(width/count), positions[x-1], x*(width/count), positions[x]);
+                    }
+
+                    positions.forEach((y, x) => {
+                        circle(x*(width/count), y, 10);
+                    })
+                }
+            }
         }
     </script>
+
+    <textarea id="out">
+
+    </textarea>
+
+    <button onclick="multiout()">send multicmd</button>
 </body>
 
 </html>

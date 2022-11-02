@@ -2,16 +2,16 @@ import WebSocket, { WebSocketServer } from 'ws';
 
 import osc from 'osc';
 
-var udpPort = new osc.UDPPort({
+var oscPort = new osc.UDPPort({
     remoteAddress: 'localhost',
     remotePort: 5000,
     metadata: true
 });
 
-udpPort.open();
+oscPort.open();
 
-udpPort.on('ready', function() {
-    udpPort.send({
+oscPort.on('ready', function() {
+    oscPort.send({
         address: '/test',
         args: [
             {
@@ -24,7 +24,52 @@ udpPort.on('ready', function() {
             }
         ]
     })
+
+    oscPort.send({
+        // Tags this bundle with a timestamp that is 60 seconds from now.
+        // Note that the message will be sent immediately;
+        // the receiver should use the time tag to determine
+        // when to act upon the received message.
+        timeTag: osc.timeTag(0),
+    
+        packets: [
+            {
+                address: "/list-set/calm_voice_1",
+                args: [
+                    ...[1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0 ].map((i) => {
+                        return {
+                            type: "f",
+                            value: (Math.random() > .5),
+                        }
+                    })
+                ]
+            },
+            {
+                address: "/list-set/calm_voice_2",
+                args: [
+                    ...[1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0 ].map((i) => {
+                        return {
+                            type: "f",
+                            value: (Math.random() > .6),
+                        }
+                    })
+                ]
+            },
+            {
+                address: "/list-set/calm_voice_3",
+                args: [
+                    ...[1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0 ].map((i) => {
+                        return {
+                            type: "f",
+                            value: (Math.random() > .8),
+                        }
+                    })
+                ]
+            }
+        ]
+    });
 })
+
 
 import express from 'express';
 
@@ -50,7 +95,7 @@ function getPort(msg) {
 
 wss.on('connection', (ws) => {
     console.log('connected!');
-  ws.on('message', (data) => {
+      ws.on('message', (data) => {
     console.log('got %s', data);
 
     if (data.includes("birth")) {
@@ -62,7 +107,7 @@ wss.on('connection', (ws) => {
             return;
         }
 
-        udpPort.send({
+        oscPort.send({
             address: '/birth',
             args: [
                 {
@@ -80,7 +125,7 @@ wss.on('connection', (ws) => {
             return;
         }
 
-        udpPort.send({
+        oscPort.send({
             address: '/murder',
             args: [
                 {
@@ -92,7 +137,7 @@ wss.on('connection', (ws) => {
     } else if (('' +data).startsWith("tweak")) {
         let [_, val] = (data+'').split(' ');
 
-        udpPort.send({
+        oscPort.send({
             address: '/tweak',
             args: [
                 {
@@ -101,8 +146,24 @@ wss.on('connection', (ws) => {
                 }
             ]
         });
+    } else if ((''+data).startsWith("list-set")) {
+        let components = (''+data).split(' ');
+
+        let values = components.slice(2);
+        
+        oscPort.send({
+            address: `/list-set/${components[1]}`,
+            args: [
+                ...values.map(i => {
+                    return {
+                            type: "f",
+                            value: parseInt(i)
+                        }
+                })
+            ]
+        })
     }
-  });
+  })
 
   ws.send('hello');
 });

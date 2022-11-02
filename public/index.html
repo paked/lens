@@ -9,56 +9,83 @@
 
             font-family: 'Courier New', Courier, monospace;
         }
+
+        .container {
+            display: flex;
+        }
+
+        .container section {
+            width: 50%;
+        }
+
+        #widget-holder canvas {
+            margin-inline: auto;
+        }
     </style>
+    <script src="p5.js"></script>
+
 </head>
 
 <body>
-    <script src="p5.js"></script>
+    <div class="container">
+        <section>
+            <h1>Hacking Station</h1>
 
-    <h1>Hacking Station</h1>
-
-    <p>Possible ports (substitude for PORT_NAME)</p>
-    <ul>
-        <li>MODEM</li>
-        <li>BEATS</li>
-        <li>BASS</li>
-        <li>CASSETTE</li>
-        <li>PADS</li>
-    </ul>
-
-    <p>Arrays (substitute for ARRAY_NAME)</p>
-    <ul>
-        <li>calm_voice_1, calm_voice_2, calm_voice_3 (voices of the pads, 1 is on 0 is off)</li>
-    </ul>
-
-    <p>list of commands</p>
-    <ul>
-        <li>birth PORT_NAME</li>
-        <li>murder PORT_NAME</li>
-        <li>listset ARRAY_NAME</li>
-    </ul>
-
-    <p>TODO commands</p>
-    <ul>
-        <li>vset PORT_NAME (volume set)</li>
-        <li>kneecap PORT_NAME</li>
-        <li>
-            for drums
+            <p>Possible ports (substitude for PORT_NAME)</p>
             <ul>
-                <li></li>
+                <li>MODEM</li>
+                <li>BEATS</li>
+                <li>BASS</li>
+                <li>CASSETTE</li>
+                <li>PADS</li>
             </ul>
-        </li>
-    </ul>
+        
+            <p>Arrays (substitute for ARRAY_NAME)</p>
+            <ul>
+                <li>calm_voice_1, calm_voice_2, calm_voice_3 (voices of the pads, 1 is on 0 is off)</li>
+            </ul>
+        
+            <p>list of commands</p>
+            <ul>
+                <li>birth PORT_NAME</li>
+                <li>murder PORT_NAME</li>
+                <li>list-set ARRAY_NAME</li>
+            </ul>
+        
+            <p>TODO commands</p>
+            <ul>
+                <li>vset PORT_NAME (volume set)</li>
+                <li>kneecap PORT_NAME</li>
+                <li>
+                    for drums
+                    <ul>
+                        <li></li>
+                    </ul>
+                </li>
+            </ul>
+        
+            <br>
 
-    <input id="cmd" type="text" placeholder="your command here" />
+            <br>
+        
+            <form id="form">
+                <input id="cmd" type="text" placeholder="your command here" size="80" />
 
-    <button onclick="go('quiz')">Enter command</button>
+                <button onclick="go('quiz')">Enter command</button>
+            </form>
+        </section>
 
-    <br>
-    <br>
-    <br>
+        <section>
+            <div id="widget-holder"></div>
+            <textarea id="out" cols="80" rows="5">
+            </textarea>
+        
+            <button onclick="multiout()">send multicmd</button>
+        </section>
+    </div>
 
     <script>
+        document.getElementById("form").addEventListener("submit", (event) => { event.preventDefault(); go()})
         function question() {
             let a = Math.ceil(Math.random() * 10);
             let b = Math.ceil(Math.random() * 12);
@@ -71,7 +98,7 @@
 
         let ws = new WebSocket("ws://trisolaris.local:3000");
 
-        function go(t) {
+        function go() {
             let elem = document.getElementById('cmd');
 
             // if (!question()) {
@@ -81,7 +108,17 @@
             //     return;
             // }
 
-            alert('nice!');
+            if (elem.value.startsWith("open")) {
+                let sections = elem.value.split(' ');
+                if (sections[1] === "PADS") {
+                    state = "PADS";
+                }
+
+                return;
+            } else if (elem.value.startsWith("close")) {
+                state = "NONE";
+                return;
+            }
 
             ws.send(elem.value);
         }
@@ -100,12 +137,13 @@
         let rows = [[], [], []];
         let positions = [];
 
-        let state = "PADS";
+        let state = "NONE";
 
         let count = 16;
 
         function setup() {
-            createCanvas(400, 400);
+            let canvas = createCanvas(400, 400);
+            canvas.parent('widget-holder');
 
             rows = rows.map(row => [...Array.from({ length: count }).fill(undefined)]);
         }
@@ -129,17 +167,32 @@
             } else if (state === "PADS") {
                 document.getElementById('out').value = rows.map((row, i) => `list-set calm_voice_${i+1} ` + row.map(v => v ? 1 : 0).join(' ')).join('\n');
 
+                push()
+                noStroke();
                 rows.forEach((_, i) => {
                     fill(i % 2 === 0 ? 'green' : 'grey');
                     rect(0, height/rows.length*i, width, width/rows.length*(i+1))
                 })
+                pop()
+
+                for (let i = 0; i < 4; i++) {
+                    fill(0, 30);
+                    push()
+
+                    noStroke();
+                    if (i % 2 === 0) {
+                        rect(width/4*i, 0, width/4, height)
+                    }
+
+                   pop()
+                }
 
                 if (mouseIsPressed && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
                     let row = Math.floor(mouseY/(height/rows.length));
 
-                    let value = (keyIsDown(SHIFT)) ? undefined : mouseY;
+                    let val = (keyIsDown(SHIFT)) ? undefined : mouseY;
 
-                    rows[row][Math.floor(mouseX/(width/count))] = value;
+                    rows[row][Math.floor(mouseX/(width/count))] = val;
                 }
 
                 for (let i = 0; i < rows.length; i++) {
@@ -149,22 +202,23 @@
                             continue;
                         }
 
-                        line((x-1)*(width/count), positions[x-1], x*(width/count), positions[x]);
+                        line((x-1 + .5)*(width/count), positions[x-1], (x+.5)*(width/count), positions[x]);
                     }
 
                     positions.forEach((y, x) => {
-                        circle(x*(width/count), y, 10);
+                        push();
+                        if (Math.floor(mouseX/(width/count)) === x) {
+                            fill("blue");
+                        }
+                        circle((x+.5)*(width/count), y, 10);
+                        pop();
                     })
                 }
+            } else if (state === "BEATS") {
+                
             }
         }
     </script>
-
-    <textarea id="out">
-
-    </textarea>
-
-    <button onclick="multiout()">send multicmd</button>
 </body>
 
 </html>

@@ -94,10 +94,8 @@ function getPort(msg) {
 }
 
 wss.on('connection', (ws) => {
-    console.log('connected!');
       ws.on('message', (data) => {
-    console.log('got %s', data);
-
+        console.log('got %s', data);
     if (data.includes("birth")) {
         let port = getPort(data);
 
@@ -160,6 +158,26 @@ wss.on('connection', (ws) => {
                             value: parseInt(i)
                         }
                 })
+            ]
+        })
+    }  else if ((''+data).startsWith("value-set")) {
+        let components = (''+data).split(' ');
+
+        let name = components[1]
+
+        let value = components[2];
+        
+        oscPort.send({
+            address: `/value-set`,
+            args: [
+                {
+                    type: "s",
+                    value: name,
+                },
+                {
+                    type: "f",
+                    value: value
+                }
             ]
         })
     }

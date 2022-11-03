@@ -44,12 +44,18 @@
             <ul>
                 <li>calm_voice_1, calm_voice_2, calm_voice_3 (voices of the pads, 1 is on 0 is off)</li>
             </ul>
+
+            <p>Values (substitute for VALUE_NAME</p>
+            <ul>
+                <li>bass: "beat-ratio"</li>
+            </ul>
         
             <p>list of commands</p>
             <ul>
                 <li>birth PORT_NAME</li>
                 <li>murder PORT_NAME</li>
                 <li>list-set ARRAY_NAME</li>
+                <li>value-set VALUE_NAME</li>
             </ul>
         
             <p>TODO commands</p>
@@ -85,7 +91,7 @@
     </div>
 
     <script>
-        document.getElementById("form").addEventListener("submit", (event) => { event.preventDefault(); go()})
+        document.getElementById("form").addEventListener("submit", (event) => { event.preventDefault();})
         function question() {
             let a = Math.ceil(Math.random() * 10);
             let b = Math.ceil(Math.random() * 12);
@@ -96,9 +102,10 @@
             return parseInt(answer) === a * b * c;
         }
 
-        let ws = new WebSocket("ws://trisolaris.local:3000");
+        let ws = new WebSocket("wss://b527-150-203-68-105.au.ngrok.io");
 
         function go() {
+            console.log('hi')
             let elem = document.getElementById('cmd');
 
             // if (!question()) {
@@ -112,6 +119,10 @@
                 let sections = elem.value.split(' ');
                 if (sections[1] === "PADS") {
                     state = "PADS";
+                } else if (sections[1] === "BEATS") {
+                    state = "BEATS";
+                } else if (sections[1] === "BASS") {
+                    state = "BASS";
                 }
 
                 return;
@@ -148,24 +159,45 @@
             rows = rows.map(row => [...Array.from({ length: count }).fill(undefined)]);
         }
 
+        let bassAtX = 0;
+        let bassAtY = 0;
+
         function draw() {
             background('darkgreen');
             stroke('none');
 
-            if (state === "NONE") {
+            if (state === "BASS") {
                 if (mouseIsPressed) {
                     fill(0);
 
                     if (frameCount % 20 === 0) {
-                        ws.send("tweak " + mouseX/width)
+                        ws.send("tweak " + constrain(mouseX/width, 0, 1));
+
+                        bassAtX = mouseX;
+                        bassAtY = mouseY;
                     }
                 } else {
                     fill(255);
                 }
 
                 ellipse(mouseX, mouseY, 80, 80);
+
+                fill('blue')
+                circle(bassAtX, bassAtY, 40);
             } else if (state === "PADS") {
-                document.getElementById('out').value = rows.map((row, i) => `list-set calm_voice_${i+1} ` + row.map(v => v ? 1 : 0).join(' ')).join('\n');
+                document.getElementById('out').value = rows.map((row, i) =>  {
+                    return `list-set calm_voice_${i+1} ` + row.map(v => { 
+                        if (!v) {
+                            return 0;
+                        }
+
+                        let val = (height/rows.length) - (v % Math.ceil(height/rows.length));
+
+                        let pc = val / (height/rows.length);
+
+                        return Math.ceil(pc * 8);
+                    }).join(' ')
+                }).join('\n');
 
                 push()
                 noStroke();
@@ -215,7 +247,48 @@
                     })
                 }
             } else if (state === "BEATS") {
-                
+                document.getElementById('out').value = rows.map((row, i) => `list-set drums_${i+1} ` + row.map(v => v ? 1 : 0).join(' ')).join('\n');
+
+                push()
+                noStroke();
+                rows.forEach((_, i) => {
+                    fill(i % 2 === 0 ? 'green' : 'grey');
+                    rect(0, height/rows.length*i, width, width/rows.length*(i+1))
+                })
+                pop()
+
+                for (let i = 0; i < 4; i++) {
+                    fill(0, 30);
+                    push()
+
+                    noStroke();
+                    if (i % 2 === 0) {
+                        rect(width/4*i, 0, width/4, height)
+                    }
+
+                    pop()
+                }
+
+                if (mouseIsPressed && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+                    let row = Math.floor(mouseY/(height/rows.length));
+
+                    let val = (keyIsDown(SHIFT)) ? undefined : mouseY;
+
+                    rows[row][Math.floor(mouseX/(width/count))] = val;
+                }
+
+                for (let i = 0; i < rows.length; i++) {
+                    let positions = rows[i];
+
+                    positions.forEach((y, x) => {
+                        push();
+                        if (Math.floor(mouseX/(width/count)) === x) {
+                            fill("blue");
+                        }
+                        circle((x+.5)*(width/count), y, 10);
+                        pop();
+                    })
+                }
             }
         }
     </script>

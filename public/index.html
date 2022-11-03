@@ -8,6 +8,8 @@
             color: #4df24d;
 
             font-family: 'Courier New', Courier, monospace;
+
+            overflow: hidden;
         }
 
         .container {
@@ -21,6 +23,53 @@
         #widget-holder canvas {
             margin-inline: auto;
         }
+
+        #thingo {
+            position: absolute;
+            width: 100%;
+            top: 1000px;
+        }
+
+        #thingo p {
+            max-width: 100%;
+            margin-inline: auto;
+
+            text-align: center;
+            font-weight: 800;
+            font-size: 60px;
+
+            background-color: black;
+            color: green;
+        }
+
+        .animate-hack {
+            animation-name: hack;
+            animation-duration: 3s;
+            animation-timing-function: ease-in;
+        }
+
+        @keyframes hack {
+            to {
+                top: -200px;
+            }
+
+            from {
+                top: 1000px;
+            }
+        }
+
+        input, textarea {
+            background-color: black;
+            border: 1px solid green;
+            color: white;
+
+            width: 100%;
+        }
+
+        input {
+            font-size: 32px;
+        }
+
     </style>
     <script src="p5.js"></script>
 
@@ -31,19 +80,58 @@
         <section>
             <h1>Hacking Station</h1>
 
-            <p>Possible ports (substitude for PORT_NAME)</p>
-            <ul>
-                <li>MODEM</li>
-                <li>BEATS</li>
-                <li>BASS</li>
-                <li>CASSETTE</li>
-                <li>PADS</li>
-            </ul>
-        
-            <p>Arrays (substitute for ARRAY_NAME)</p>
-            <ul>
-                <li>calm_voice_1, calm_voice_2, calm_voice_3 (voices of the pads, 1 is on 0 is off)</li>
-            </ul>
+            <p>Open the relevant instruments docs!</p>
+            <details>
+                <summary>BEATS</summary>
+
+                <p>UI: use like a sequencer</p>
+
+                <ul>
+                    <li>birth BEATS</li>
+                    <li>open BEATS</li>
+                    <li>value-set drums-divider [1 is every beat, .25 is every 1/4 beat, 4 is every 4 beats, etc.]</li>
+                    <li>value-set beats-reverb [90 is low reverb, 99 is long reverb. less is chill.]</li>
+                    <li>murder BEATS</li>
+                </ul>
+            </details>
+            <details>
+                <summary>BASS</summary>
+
+                <p>UI: resonance is how far along the width you place the dot. note is how far down the screen you are.</p> 
+
+                <ul>
+                    <li>birth BASS</li>
+                    <li>open BASS</li>
+                    <li>value-set beat-ratio [.1 is punchy, 1 is full length notes]</li>
+                    <li>value-set bass-divider [1 is every beat, .25 is every 1/4 beat, 4 is every 4 beats, etc.]</li>
+                    <li>murder BASS</li>
+                </ul>
+            </details>
+            <details>
+                <summary>PADS</summary>
+
+                <p>UI: sequencer, resonance is how high your dots are (use quite low resonances)</p>
+
+                <ul>
+                    <li>birth PADS</li>
+                    <li>open PADS</li>
+                    <li>value-set pads-punch [10 is fast, 500 is calm and peaceful</li>
+                    <li>value-set pads-divider [1 is every beat, .25 is every 1/4 beat, 4 is every 4 beats, etc.]</li>
+                    <li>murder PADS</li>
+                </ul>
+            </details>
+            <details>
+                <summary>atmos</summary>
+
+                <ul>
+                    <li>bang htp{,-stop}</li>
+                    <li>bang ocean{,-stop}</li>
+                    <li>bang narcing{,-stop}</li>
+                    <li>bang lss{,-stop}</li>
+                    <li>birth CASSETTE</li>
+                    <li>birth MODEM</li>
+                </ul>
+            </details>
 
             <p>Values (substitute for VALUE_NAME</p>
             <ul>
@@ -61,23 +149,13 @@
                 <li>value-set VALUE_NAME</li>
             </ul>
         
-            <p>TODO commands</p>
-            <ul>
-                <li>vset PORT_NAME (volume set)</li>
-                <li>kneecap PORT_NAME</li>
-                <li>
-                    for drums
-                    <ul>
-                        <li></li>
-                    </ul>
-                </li>
-            </ul>
-        
             <br>
 
             <br>
         
             <form id="form">
+                <div id="thingo"><p>cmd</p></div>
+
                 <input id="cmd" type="text" placeholder="your command here" size="80" />
 
                 <button onclick="go('quiz')">Enter command</button>
@@ -105,7 +183,11 @@
             return parseInt(answer) === a * b * c;
         }
 
-        let ws = new WebSocket("wss://c987-150-203-68-107.au.ngrok.io");
+        let ws = new WebSocket("ws://localhost:3000");
+        ws.onerror = (ev) => {
+            console.log('ERROR ERROR')
+            console.log(ev);
+        }
 
         function go() {
             console.log('hi')
@@ -128,6 +210,13 @@
                 state = "NONE";
                 return;
             }
+
+            let anim = document.getElementById("thingo")
+            anim.classList.remove("animate-hack")
+            anim.offsetWidth
+            anim.classList.add("animate-hack")
+
+            document.querySelector("#thingo p").innerText = elem.value;
 
             ws.send(elem.value);
         }
@@ -152,7 +241,7 @@
         let count = 16;
 
         function setup() {
-            let canvas = createCanvas(400, 400);
+            let canvas = createCanvas(700, 700);
             canvas.parent('widget-holder');
 
             padRows = padRows.map(row => [...Array.from({ length: count }).fill(undefined)]);
@@ -247,7 +336,7 @@
                         if (Math.floor(mouseX/(width/count)) === x) {
                             fill("blue");
                         }
-                        circle((x+.5)*(width/count), y, 10);
+                        circle((x+.5)*(width/count), y, 30);
                         pop();
                     })
                 }
@@ -302,7 +391,7 @@
                         if (Math.floor(mouseX/(width/count)) === x) {
                             fill("blue");
                         }
-                        circle((x+.5)*(width/count), y, 10);
+                        circle((x+.5)*(width/count), y, 40);
                         pop();
                     })
                 }

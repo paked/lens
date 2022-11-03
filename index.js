@@ -180,6 +180,18 @@ wss.on('connection', (ws) => {
                 }
             ]
         })
+    } else if (('' +data).startsWith("bang")) {
+        let [_, val] = (data+'').split(' ');
+
+        oscPort.send({
+            address: '/b',
+            args: [
+                {
+                    type: 's',
+                    value: val,
+                }
+            ]
+        });
     }
   })
 

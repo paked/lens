@@ -48,6 +48,9 @@
             <p>Values (substitute for VALUE_NAME</p>
             <ul>
                 <li>bass: "beat-ratio"</li>
+                <li>all: "drums-divider", "bass-divider", "pads-divider". sets the length of each note for the instrument. 4 is 4 beats, .25 is a quarter beat.</li>
+                <li>pads: pads-punch</li>
+                <li>beats: "beats-reverb</li>
             </ul>
         
             <p>list of commands</p>
@@ -102,18 +105,13 @@
             return parseInt(answer) === a * b * c;
         }
 
-        let ws = new WebSocket("wss://b527-150-203-68-105.au.ngrok.io");
+        let ws = new WebSocket("wss://c987-150-203-68-107.au.ngrok.io");
 
         function go() {
             console.log('hi')
             let elem = document.getElementById('cmd');
 
-            // if (!question()) {
-            //     elem.disabled = true;
-
-            //     setTimeout(() => elem.disabled = false, 5000);
-            //     return;
-            // }
+            console.log("hello", elem.value)
 
             if (elem.value.startsWith("open")) {
                 let sections = elem.value.split(' ');
@@ -145,8 +143,9 @@
     </script>
 
     <script>
-        let rows = [[], [], []];
-        let positions = [];
+        let padRows = [[], [], []];
+
+        let beatRows = [[], [], [], []];
 
         let state = "NONE";
 
@@ -156,7 +155,8 @@
             let canvas = createCanvas(400, 400);
             canvas.parent('widget-holder');
 
-            rows = rows.map(row => [...Array.from({ length: count }).fill(undefined)]);
+            padRows = padRows.map(row => [...Array.from({ length: count }).fill(undefined)]);
+            beatRows = beatRows.map(row => [...Array.from({ length: count }).fill(undefined)]);
         }
 
         let bassAtX = 0;
@@ -167,11 +167,16 @@
             stroke('none');
 
             if (state === "BASS") {
+                for (let i = 0; i < 7; i++) {
+                    line(0, height/7*i, width, height/7*i);
+                }
+
                 if (mouseIsPressed) {
                     fill(0);
 
-                    if (frameCount % 20 === 0) {
+                    if (frameCount % 10 === 0) {
                         ws.send("tweak " + constrain(mouseX/width, 0, 1));
+                        ws.send(`value-set bass-note ${Math.floor(constrain(mouseY/height, 0, 1)*7)}`);
 
                         bassAtX = mouseX;
                         bassAtY = mouseY;
@@ -185,15 +190,15 @@
                 fill('blue')
                 circle(bassAtX, bassAtY, 40);
             } else if (state === "PADS") {
-                document.getElementById('out').value = rows.map((row, i) =>  {
+                document.getElementById('out').value = padRows.map((row, i) =>  {
                     return `list-set calm_voice_${i+1} ` + row.map(v => { 
                         if (!v) {
                             return 0;
                         }
 
-                        let val = (height/rows.length) - (v % Math.ceil(height/rows.length));
+                        let val = (height/padRows.length) - (v % Math.ceil(height/padRows.length));
 
-                        let pc = val / (height/rows.length);
+                        let pc = val / (height/padRows.length);
 
                         return Math.ceil(pc * 8);
                     }).join(' ')
@@ -201,9 +206,9 @@
 
                 push()
                 noStroke();
-                rows.forEach((_, i) => {
+                padRows.forEach((_, i) => {
                     fill(i % 2 === 0 ? 'green' : 'grey');
-                    rect(0, height/rows.length*i, width, width/rows.length*(i+1))
+                    rect(0, height/padRows.length*i, width, width/padRows.length*(i+1))
                 })
                 pop()
 
@@ -220,16 +225,16 @@
                 }
 
                 if (mouseIsPressed && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
-                    let row = Math.floor(mouseY/(height/rows.length));
+                    let row = Math.floor(mouseY/(height/padRows.length));
 
                     let val = (keyIsDown(SHIFT)) ? undefined : mouseY;
 
-                    rows[row][Math.floor(mouseX/(width/count))] = val;
+                    padRows[row][Math.floor(mouseX/(width/count))] = val;
                 }
 
-                for (let i = 0; i < rows.length; i++) {
-                    let positions = rows[i];
-                    for (let x = 1; x < rows[i].length; x++) {
+                for (let i = 0; i < padRows.length; i++) {
+                    let positions = padRows[i];
+                    for (let x = 1; x < padRows[i].length; x++) {
                         if (!positions[x]|| !positions[x-1]) {
                             continue;
                         }
@@ -247,14 +252,26 @@
                     })
                 }
             } else if (state === "BEATS") {
-                document.getElementById('out').value = rows.map((row, i) => `list-set drums_${i+1} ` + row.map(v => v ? 1 : 0).join(' ')).join('\n');
+                document.getElementById('out').value = beatRows.map((row, i) => `list-set drums_${i+1} ` + row.map(v => v ? 1 : 0).join(' ')).join('\n');
 
                 push()
                 noStroke();
-                rows.forEach((_, i) => {
+                beatRows.forEach((_, i) => {
                     fill(i % 2 === 0 ? 'green' : 'grey');
-                    rect(0, height/rows.length*i, width, width/rows.length*(i+1))
+                    rect(0, height/beatRows.length*i, width, width/beatRows.length*(i+1))
                 })
+                pop()
+
+                push()
+                stroke("black")
+                for (let i = 0; i < count; i++) {
+                    if (i % 4 != 0) {
+                        setLineDash([5, 5]);
+                    } else {
+                        setLineDash([1]);
+                    }
+                    line(i * width/count, 0, i * width/count, height);
+                }
                 pop()
 
                 for (let i = 0; i < 4; i++) {
@@ -270,15 +287,15 @@
                 }
 
                 if (mouseIsPressed && mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
-                    let row = Math.floor(mouseY/(height/rows.length));
+                    let row = Math.floor(mouseY/(height/beatRows.length));
 
                     let val = (keyIsDown(SHIFT)) ? undefined : mouseY;
 
-                    rows[row][Math.floor(mouseX/(width/count))] = val;
+                    beatRows[row][Math.floor(mouseX/(width/count))] = val;
                 }
 
-                for (let i = 0; i < rows.length; i++) {
-                    let positions = rows[i];
+                for (let i = 0; i < beatRows.length; i++) {
+                    let positions = beatRows[i];
 
                     positions.forEach((y, x) => {
                         push();
@@ -290,6 +307,10 @@
                     })
                 }
             }
+        }
+
+        function setLineDash(list) {
+           drawingContext.setLineDash(list);
         }
     </script>
 </body>

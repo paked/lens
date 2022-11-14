@@ -39,7 +39,7 @@
             font-size: 60px;
 
             background-color: black;
-            color: green;
+            color: white;
         }
 
         .animate-hack {
@@ -183,6 +183,7 @@
             return parseInt(answer) === a * b * c;
         }
 
+        // NOTE(harrison): you will need to change this URL if you want others to connect to your PC. if on a shared network, you can do ws://hostname.local:3000).
         let ws = new WebSocket("ws://localhost:3000");
         ws.onerror = (ev) => {
             console.log('ERROR ERROR')

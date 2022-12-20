@@ -13,7 +13,7 @@ The 4 instruments are:
 
 ### web/
 
-![A view of the "PADS" editor.](img/hacking-station.jpg)
+![A view of the "PADS" editor.](img/hacking-station.png)
 
 This directory has the code for the "hacking station" server/website, which performers use to control their instruments. Input is provided primarily through the both the main textbox on the left-hand side of the screen, and the graphical canvas on the right-hand side of the screen.
 
